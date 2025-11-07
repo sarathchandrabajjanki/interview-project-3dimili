@@ -7,9 +7,11 @@ import { gsap } from 'gsap';
 export default function Hero() {
   const backgroundRef = useRef<HTMLDivElement>(null);
   const particleRefs = useRef<HTMLDivElement[]>([]);
+  const heroSectionRef = useRef<HTMLDivElement>(null);
   const [displayedText, setDisplayedText] = useState('');
   const [displayedSubtext, setDisplayedSubtext] = useState('');
   const [hoveredIcon, setHoveredIcon] = useState<number | null>(null);
+  const [scrollProgress, setScrollProgress] = useState(0);
   const fullText = 'Discover, Buy, and Sell\nDigital Products';
   const fullSubtext = 'Your one-stop digital platform for 3D models and digital creations.\nJoin our community of creators and collectors today.';
   const typingIndexRef = useRef(0);
@@ -37,6 +39,36 @@ export default function Hero() {
         });
       }
     });
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!heroSectionRef.current) return;
+      
+      const rect = heroSectionRef.current.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const sectionHeight = rect.height;
+      
+      const scrollPosition = window.scrollY;
+      const sectionTop = rect.top + scrollPosition;
+      const sectionBottom = sectionTop + sectionHeight;
+      
+      let progress = 0;
+      if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+        progress = (scrollPosition - sectionTop) / sectionHeight;
+      } else if (scrollPosition > sectionBottom) {
+        progress = 1;
+      }
+      
+      setScrollProgress(Math.min(Math.max(progress, 0), 1));
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -111,6 +143,7 @@ export default function Hero() {
 
   return (
     <section
+      ref={heroSectionRef}
       className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900 pt-16"
       aria-label="Hero section"
       role="banner"
@@ -206,38 +239,55 @@ export default function Hero() {
             ? { ...tooltipPosition, left: '0', transform: 'none' }
             : tooltipPosition;
 
+          const centerX = 50;
+          const centerY = 50;
+          
+          const scrollOffsetX = (centerX - leftPercent) * scrollProgress * 0.8;
+          const scrollOffsetY = (centerY - topPercent) * scrollProgress * 0.8;
+          const scrollScale = 1 - scrollProgress * 0.3;
+
+          const adjustedLeft = leftPercent + scrollOffsetX;
+          const adjustedTop = topPercent + scrollOffsetY;
+
           return (
-            <motion.div
+            <div
               key={index}
               className="absolute"
-              style={item.position}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1,
-                y: [0, -15, 0],
-                rotate: [0, 5, -5, 0],
+              style={{
+                left: `${adjustedLeft}%`,
+                top: `${adjustedTop}%`,
+                transform: `scale(${scrollScale})`,
+                transition: 'all 0.1s linear',
               }}
-              transition={{
-                opacity: { duration: 0.5, delay: item.delay },
-                scale: { duration: 0.5, delay: item.delay },
-                y: {
-                  duration: 3 + index * 0.3,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: item.delay,
-                },
-                rotate: {
-                  duration: 4 + index * 0.2,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: item.delay,
-                },
-              }}
-              onMouseEnter={() => setHoveredIcon(index)}
-              onMouseLeave={() => setHoveredIcon(null)}
             >
-              <div className="w-16 h-16 rounded-full bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center hover:bg-gray-700/50 transition-colors duration-300 cursor-pointer">
+              <motion.div
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ 
+                  opacity: 1, 
+                  scale: 1,
+                  y: [0, -15, 0],
+                  rotate: [0, 5, -5, 0],
+                }}
+                transition={{
+                  opacity: { duration: 0.5, delay: item.delay },
+                  scale: { duration: 0.5, delay: item.delay },
+                  y: {
+                    duration: 3 + index * 0.3,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: item.delay,
+                  },
+                  rotate: {
+                    duration: 4 + index * 0.2,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: item.delay,
+                  },
+                }}
+                onMouseEnter={() => setHoveredIcon(index)}
+                onMouseLeave={() => setHoveredIcon(null)}
+              >
+                <div className="w-16 h-16 rounded-full bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 flex items-center justify-center hover:bg-gray-700/50 transition-colors duration-300 cursor-pointer">
                 <svg
                   className={`w-8 h-8 ${colorClasses[item.color as keyof typeof colorClasses]}`}
                   fill="none"
@@ -277,7 +327,8 @@ export default function Hero() {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
+              </motion.div>
+            </div>
           );
         })}
       </div>
@@ -291,7 +342,7 @@ export default function Hero() {
         >
           <motion.h1
             variants={titleVariants}
-            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-white leading-tight tracking-tight whitespace-pre-line"
+            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight tracking-tight whitespace-pre-line"
           >
             {displayedText}
             {displayedText.length < fullText.length && (
@@ -312,7 +363,7 @@ export default function Hero() {
 
           <motion.p
             variants={itemVariants}
-            className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 max-w-3xl mx-auto leading-relaxed whitespace-pre-line min-h-[4rem] sm:min-h-[5rem] md:min-h-[6rem]"
+            className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed whitespace-pre-line min-h-[4rem] sm:min-h-[5rem] md:min-h-[6rem]"
           >
             {displayedSubtext}
             {displayedSubtext && displayedSubtext.length < fullSubtext.length && (
